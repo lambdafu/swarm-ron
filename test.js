@@ -18,10 +18,16 @@ const ops = [
     ".lww#test@time-orig:int=1",
     ".lww#test@time-orig:str\"2\"",
 ];
+const vals = [
+    Op.FRAME_ATOM,
+    1,
+    "2"
+];
 const f = new Op.Frame(frame);
 const nf = new Op.Frame();
 for(let op of f) {
     eq(op.toString(), ops.shift());
+    eq(op.value(0), vals.shift());
     nf.push(op);
 }
 eq(nf.toString(), frame);
