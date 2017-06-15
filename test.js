@@ -1,5 +1,6 @@
 "use strict";
 const Op = require('./index');
+const UUID = require('swarm-ron-uuid');
 const assert = require('assert');
 const eq = assert.equal;
 const ok = assert.ok;
@@ -31,3 +32,9 @@ for(let op of f) {
     nf.push(op);
 }
 eq(nf.toString(), frame);
+
+const subs = {"$A":"1","$B":"2"};
+const mapd = Op.Frame.map_uuids("@$A>0:$B>~", uuid => {
+    return uuid in subs ? UUID.fromString(subs[uuid]) : uuid;
+});
+eq(mapd, "@1>0:2>~");

@@ -206,6 +206,25 @@ class Frame {
     toString () {
         return this.body;
     }
+
+    /**
+     * Substitute UUIDs in all of the frame's ops.
+     * Typically used for macro expansion.
+     * @param raw_frame - {String}
+     * @param fn {Function} - the substituting function
+     */
+    static map_uuids (raw_frame, fn) {
+        const ret = new Frame();
+        for(const i=new Iterator(raw_frame); i.op; i.nextOp())
+            ret.push(new Op(
+                fn(i.op.type),
+                fn(i.op.object),
+                fn(i.op.event),
+                fn(i.op.location),
+                i.op.values
+            ));
+        return ret.toString();
+    }
     
 }
 
