@@ -68,11 +68,21 @@ class Op {
         const m = Op.RE.exec(body);
         if (!m || m.index!==off)
             return null;
+        const defs = [ctx.type, ctx.object, ctx.event, ctx.location];
+        for(let u=0; u<4; u++) {
+            let redef = Op.REDEF_SEPS.indexOf(m[u+1][0]);
+            if (redef>0) {
+                defs[u] = ctx.uuid(redef);
+            } else if (redef===0) {
+                defs[u] = null;
+            }
+        }
+        let prev = UUID.ZERO;
         const ret = new Op(
-            UUID.fromString(m[1], ctx.type),
-            UUID.fromString(m[2], ctx.object),
-            UUID.fromString(m[3], ctx.event),
-            UUID.fromString(m[4], ctx.location),
+            prev=UUID.fromString(m[1], defs[0]||prev),
+            prev=UUID.fromString(m[2], defs[1]||prev),
+            prev=UUID.fromString(m[3], defs[2]||prev),
+            prev=UUID.fromString(m[4], defs[3]||prev),
             m[5]
         );
         ret.source = m[0];

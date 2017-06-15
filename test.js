@@ -51,3 +51,8 @@ till.nextOp();
 const crop = Frame.slice(from, till);
 eq(crop, '.lww#test@time-orig:int=1@(1:str"2"');
 
+const redef = ".lww#(1-test@`!:\\=1";
+const ri = new Iterator(redef);
+ok(ri.op.event.eq(ri.op.object));
+ri.nextOp();
+ok(ri.op.location.eq(ri.op.object));
