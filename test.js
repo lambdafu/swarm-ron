@@ -56,3 +56,7 @@ const ri = new Iterator(redef);
 ok(ri.op.event.eq(ri.op.object));
 ri.nextOp();
 ok(ri.op.location.eq(ri.op.object));
+
+const template = ".lww#$1@`!";
+const ti = new Iterator(template);
+ok(ti.op.event.eq(ti.op.object));

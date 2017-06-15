@@ -231,10 +231,10 @@ class Frame {
         const ret = new Frame();
         for(const i=new Iterator(raw_frame); i.op; i.nextOp())
             ret.push(new Op(
-                fn(i.op.type)||i.op.type,
-                fn(i.op.object)||i.op.object,
-                fn(i.op.event)||i.op.event,
-                fn(i.op.location)||i.op.location,
+                fn(i.op.type,0) || i.op.type,
+                fn(i.op.object,1) || i.op.object,
+                fn(i.op.event,2) || i.op.event,
+                fn(i.op.location,3) || i.op.location,
                 i.op.values
             ));
         return ret.toString();
