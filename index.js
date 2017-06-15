@@ -16,10 +16,15 @@ class Op {
      * @param values {String}
      */
     constructor (type, object, event, location, values) {
+        /** @type {UUID} */
         this.type = type;
+        /** @type {UUID} */
         this.object = object;
+        /** @type {UUID} */
         this.event = event;
+        /** @type {UUID} */
         this.location = location;
+        /** @type {String} */
         this.values = values;
         // @type {Array}
         this.parsed_values = undefined;
@@ -32,6 +37,22 @@ class Op {
             this.parsed_values = Op.ron2js(this.values);
         return this.parsed_values[i];
     }
+
+    isHeader () {
+        return this.values===Op.FRAME_SEP || this.value(0)===Op.FRAME_ATOM;
+    }
+
+    isQuery () {
+        return this.values===Op.QUERY_SEP || this.value(0)===Op.QUERY_ATOM;
+    }
+
+    isRegular () {
+        return !this.isHeader() && !this.isQuery();
+    }
+
+    isError () {
+        return this.event.value===UUID.ERROR.value;
+    } 
 
     /**
      *
@@ -58,7 +79,7 @@ class Op {
         return ret;
     }
 
-    /**
+    /** Get op UUID by index (0-3)
      * @return {UUID} */
     uuid (i) {
         switch (i) {
@@ -136,8 +157,8 @@ class Op {
                     Op.INT_ATOM_SEP + v : Op.FLOAT_ATOM_SEP + v;
                 case UUID: return Op.UUID_ATOM_SEP + v.toString();
                 default:
-                    if (v===Op.FRAME_ATOM) return '!';
-                    if (v===Op.QUERY_ATOM) return '?';
+                    if (v===Op.FRAME_ATOM) return Op.FRAME_SEP;
+                    if (v===Op.QUERY_ATOM) return Op.QUERY_SEP;
                     throw new Error("unsupported type");
             }
         });
@@ -159,11 +180,13 @@ Op.QUERY_ATOM = Symbol("QUERY");
 Op.INT_ATOM_SEP = '=';
 Op.FLOAT_ATOM_SEP = '^';
 Op.UUID_ATOM_SEP = '>';
+Op.FRAME_SEP = '!';
+Op.QUERY_SEP = '?';
 
 class Frame {
     
     constructor (string) {
-        this.body = string || '';
+        this.body = string ? string.toString() : '';
         this.last_op = Op.ZERO;
     }
 
@@ -189,8 +212,9 @@ class Frame {
 class Iterator {
 
     constructor (body) {
-        this.body = body;
+        this.body = body || '';
         this.offset = 0;
+        // @type {Op}
         this.op = this.nextOp();
     }
 
@@ -212,6 +236,42 @@ class Iterator {
     
 }
 
+/** A stream of frames. */
+class Stream {
+
+    /**
+     * Subscribe to updates.
+     * @param query {String}
+     * @param stream {Stream}
+     */
+    on (query, stream) {
+    }
+
+    /**
+     * Unsubscribe
+     * @param query {String}
+     * @param stream {Stream}
+     */
+    off (query, stream) {
+    }
+
+    /**
+     * Push a new op/frame to the log.
+     * @param frame {String}
+     */
+    push (frame) {
+    }
+
+    /**
+     * Receive a new update (frame)
+     * @param frame {String}
+     */
+    update (frame) {
+    }
+
+}
+
 Op.Frame = Frame;
+Op.Stream = Stream;
 Frame.Iterator = Iterator;
 module.exports = Op;
