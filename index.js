@@ -217,13 +217,31 @@ class Frame {
         const ret = new Frame();
         for(const i=new Iterator(raw_frame); i.op; i.nextOp())
             ret.push(new Op(
-                fn(i.op.type),
-                fn(i.op.object),
-                fn(i.op.event),
-                fn(i.op.location),
+                fn(i.op.type)||i.op.type,
+                fn(i.op.object)||i.op.object,
+                fn(i.op.event)||i.op.event,
+                fn(i.op.location)||i.op.location,
                 i.op.values
             ));
         return ret.toString();
+    }
+
+    /**
+     * Crop a frame, i.e. make a new [from,till) frame
+     * @param from {Iterator} -- first op of the new frame
+     * @param till {Iterator} -- end the frame before this op
+     * @return {String}
+     */
+    static crop (from, till) {
+        if (!from.op) return '';
+        if (from.body!==till.body)
+            throw new Error("iterators of different frames");
+        let ret = from.op.toString();
+        ret += from.body.substring(
+            from.offset+from.length,
+            till.op ? till.offset : undefined
+        );
+        return ret;
     }
     
 }
@@ -233,14 +251,32 @@ class Iterator {
     constructor (body) {
         this.body = body || '';
         this.offset = 0;
-        // @type {Op}
+        this.length = 0;
+        /** @type {Op} */
         this.op = this.nextOp();
     }
 
+    /**
+     * @return {Iterator}
+     */
+    clone () {
+        const ret = new Iterator(this.body);
+        ret.offset = this.offset;
+        ret.length = this.length;
+        ret.op = this.op;
+        return ret;
+    }
+
     nextOp () {
-        this.op = Op.fromString(this.body, this.op, this.offset);
-        if (this.op!==null)
-            this.offset += this.op.source.length;
+        this.offset += this.length;
+        if (this.offset===this.body.length) {
+            this.op = null;
+            this.length = 1;
+        } else {
+            this.op = Op.fromString(this.body, this.op, this.offset);
+            if (this.op !== null)
+                this.length = this.op.source.length;
+        }
         return this.op;
     }
 

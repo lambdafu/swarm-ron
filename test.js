@@ -1,5 +1,7 @@
 "use strict";
 const Op = require('./index');
+const Frame = Op.Frame;
+const Iterator = Frame.Iterator;
 const UUID = require('swarm-ron-uuid');
 const assert = require('assert');
 const eq = assert.equal;
@@ -38,3 +40,12 @@ const mapd = Op.Frame.map_uuids("@$A>0:$B>~", uuid => {
     return uuid in subs ? UUID.fromString(subs[uuid]) : uuid;
 });
 eq(mapd, "@1>0:2>~");
+
+const big = '.lww#test@time-orig!:int=1@(1:str"2"@(3:ref>3';
+const from = new Iterator(big);
+from.nextOp();
+const till = from.clone();
+till.nextOp();
+till.nextOp();
+const crop = Frame.crop(from, till);
+eq(crop, '.lww#test@time-orig:int=1@(1:str"2"');
