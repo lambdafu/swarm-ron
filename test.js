@@ -14,6 +14,7 @@ eq(a.object.origin, '0');
 eq(a.object.sep, '$');
 eq(a.value(0), 1);
 eq(a.type+'', '0');
+eq(a.key(), '.0#id');
 
 const frame = '.lww#test@time-orig!:int=1:str"2"';
 const ops = [
@@ -47,5 +48,6 @@ from.nextOp();
 const till = from.clone();
 till.nextOp();
 till.nextOp();
-const crop = Frame.crop(from, till);
+const crop = Frame.slice(from, till);
 eq(crop, '.lww#test@time-orig:int=1@(1:str"2"');
+

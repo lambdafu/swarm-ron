@@ -91,6 +91,10 @@ class Op {
         }
     }
 
+    key () {
+        return '.'+this.type+'#'+this.object;
+    }
+
     /**
      * @param context_op {Op}
      * @return {String}
@@ -232,7 +236,7 @@ class Frame {
      * @param till {Iterator} -- end the frame before this op
      * @return {String}
      */
-    static crop (from, till) {
+    static slice (from, till) {
         if (!from.op) return '';
         if (from.body!==till.body)
             throw new Error("iterators of different frames");
