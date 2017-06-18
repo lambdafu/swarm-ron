@@ -214,7 +214,7 @@ class Frame {
     }
 
     [Symbol.iterator]() {
-        return new Iterator (this.body);
+        return new Cursor (this.body);
     }
     
     toString () {
@@ -229,7 +229,7 @@ class Frame {
      */
     static map_uuids (raw_frame, fn) {
         const ret = new Frame();
-        for(const i=new Iterator(raw_frame); i.op; i.nextOp())
+        for(const i=new Cursor(raw_frame); i.op; i.nextOp())
             ret.push(new Op(
                 fn(i.op.type,0) || i.op.type,
                 fn(i.op.object,1) || i.op.object,
@@ -242,8 +242,8 @@ class Frame {
 
     /**
      * Crop a frame, i.e. make a new [from,till) frame
-     * @param from {Iterator} -- first op of the new frame
-     * @param till {Iterator} -- end the frame before this op
+     * @param from {Cursor} -- first op of the new frame
+     * @param till {Cursor} -- end the frame before this op
      * @return {String}
      */
     static slice (from, till) {
@@ -260,21 +260,25 @@ class Frame {
     
 }
 
-class Iterator {
+class Cursor {
 
     constructor (body) {
-        this.body = body || '';
+        this.body = body ? body.toString() : '';
         this.offset = 0;
         this.length = 0;
         /** @type {Op} */
         this.op = this.nextOp();
     }
 
+    toString() {
+        return this.body;
+    }
+
     /**
-     * @return {Iterator}
+     * @return {Cursor}
      */
     clone () {
-        const ret = new Iterator(this.body);
+        const ret = new Cursor(this.body);
         ret.offset = this.offset;
         ret.length = this.length;
         ret.op = this.op;
@@ -302,6 +306,13 @@ class Iterator {
             done: ret===null
         }
     }
+
+    /** @param i {Frame|Cursor|String}
+     *  @return {Cursor} */
+    static as (i) {
+        if (i&&i.constructor===Cursor) return i;
+        return new Cursor(i.toString());
+    }
     
 }
 
@@ -310,7 +321,7 @@ class Stream {
 
     /**
      * Subscribe to updates.
-     * @param query {String}
+     * @param query {Cursor}
      * @param stream {Stream}
      */
     on (query, stream) {
@@ -318,7 +329,7 @@ class Stream {
 
     /**
      * Unsubscribe
-     * @param query {String}
+     * @param query {Cursor}
      * @param stream {Stream}
      */
     off (query, stream) {
@@ -326,21 +337,59 @@ class Stream {
 
     /**
      * Push a new op/frame to the log.
-     * @param frame {String}
+     * @param frame {Cursor}
      */
     push (frame) {
     }
 
+    /** @param frame {String} */
+    write (frame) {
+        const i = Cursor.as(frame);
+        if (!i.op) {
+        } else if (i.op.isQuery()) {
+            i.op.event.eq(UUID.NEVER) ? this.off(i) : this.on(i);
+        } else {
+            this.push(i);
+        }
+    }
+
     /**
      * Receive a new update (frame)
-     * @param frame {String}
+     * @param frame {Cursor}
+     * @param source {Stream}
      */
-    update (frame) {
+    update (frame, source) {
+    }
+
+    /** @param frame {String} */
+    recv (frame) {
+        this.update(Cursor.as(frame));
     }
 
 }
 
-Op.Frame = Frame;
-Op.Stream = Stream;
-Frame.Iterator = Iterator;
-module.exports = Op;
+Frame.Iterator = Cursor;
+Frame.Cursor = Cursor;
+const ex = module.exports = Op; // TODO phase out
+ex.Frame = Frame;
+ex.Op = Op;
+ex.Stream = Stream;
+ex.Cursor = Cursor;
+
+ex.FN = {
+    RDT: {}, // reducers
+    MAP: {}, // mappers
+    API: {}, // API/assemblers
+    IS: {
+        OP_BASED: 1,
+        STATE_BASED: 2,
+        PATCH_BASED: 4,
+        VV_DIFF: 8,
+        OMNIVOROUS: 16,
+        IDEMPOTENT: 32,
+    },
+};
+// e.g. RON.FN.MAP.json.lww
+// RON.FN.REDUCE.lww
+// RON.FN.API.json
+// RON.FN.RDT.lww.FEATURES & RON.FN.IS.OP_BASED 

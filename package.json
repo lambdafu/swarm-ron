@@ -1,6 +1,6 @@
 {
     "name": "swarm-ron",
-    "version": "2.0.17",
+    "version": "2.0.20",
     "description": "Swarm Replicated Object Notation (RON)",
     "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
     "main": "index.js",
