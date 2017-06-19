@@ -1,5 +1,5 @@
 "use strict";
-const RON = require('swarm-ron-grammar');
+const Grammar = require('swarm-ron-grammar');
 const UUID = require('swarm-ron-uuid');
 
 /** A RON op object. Typically, an Op is hosted in a frame.
@@ -29,7 +29,7 @@ class Op {
         // @type {Array}
         this.parsed_values = undefined;
         // @type {String}
-        this.source = null;
+        this.source = null; // FIXME remove
     }
 
     value (i) {
@@ -57,8 +57,8 @@ class Op {
     /**
      *
      * @param body {String} -- serialized frame
-     * @param context {Op} -- previous/context op
-     * @param offset {Number} -- frame body offset
+     * @param context {Op=} -- previous/context op
+     * @param offset {Number=} -- frame body offset
      * @return {Op}
      */
     static fromString (body, context, offset) {
@@ -114,9 +114,9 @@ class Op {
         const ctx = context_op || Op.ZERO;
         for(let u=0; u<4; u++) {
             const uuid = this.uuid(u);
-            const def = ctx.uuid(u);
-            if (uuid.eq(def)) continue;
-            let str = uuid.toString();
+            const same = ctx.uuid(u);
+            if (uuid.eq(same)) continue;
+            let str = uuid.toString(same);
             if (u) for(let d=0; d<4 && str.length>1; d++) if (d!==u) {
                 const def = d ? ctx.uuid(d) : this.uuid(u-1);
                 const restr = Op.REDEF_SEPS[d] + uuid.toString(def);
@@ -181,8 +181,8 @@ class Op {
 
 }
 
-Op.RE = new RegExp(RON.OP.source, 'g');
-Op.VALUE_RE = new RegExp(RON.ATOM, 'g');
+Op.RE = new RegExp(Grammar.OP.source, 'g');
+Op.VALUE_RE = new RegExp(Grammar.ATOM, 'g');
 Op.ZERO = new Op(UUID.ZERO,UUID.ZERO,UUID.ZERO,UUID.ZERO,">0");
 Op.END = new Op(UUID.ERROR,UUID.ERROR,UUID.ERROR,UUID.ERROR,'>~');
 Op.PARSE_ERROR = new Op
@@ -368,15 +368,68 @@ class Stream {
 
 }
 
+
+/***
+ *
+ * @param old_state_frame {String}
+ * @param change_frame {String}
+ * @return {String}
+ */
+function generic_reduce (old_state_frame, change_frame) {
+    const oi = new Cursor(old_state_frame);
+    const ai = new Cursor(change_frame);
+    const reduce = RON.FN.RDT[oi.op.type];
+    let error;
+    const features = reduce&&reduce.IS;
+    if (!reduce) {
+        error = ">NOTYPE";
+    } else if (oi.op.isQuery() || ai.op.isQuery()) {
+        error = ">NOQUERY";
+    } else if (0===(features&RON.FN.IS.OP_BASED) && (oi.op.isRegular() || ai.op.isRegular())) {
+        error = ">NOOPBASED";
+    } else if (0===(features&RON.FN.IS.STATE_BASED) && ai.op.isHeader()) {
+        error = ">NOSTATBASD";
+    } else if (0===(features&RON.FN.IS.OMNIVOROUS) && !oi.op.type.eq(ai.op.type)) {
+        error = ">NOOMNIVORS";
+    } else if (ai.op.isError()) {
+        error = ">ERROR"; // TODO fetch msg
+    }
+    const new_frame = new Op.Frame();
+    if (!error) {
+        new_frame.push( new Op(
+            oi.op.type,
+            oi.op.object,
+            ai.op.event,
+            oi.op.isHeader() ? oi.op.location : oi.op.event,
+            Op.FRAME_SEP
+        ) );
+        reduce(oi, ai, new_frame);
+    }
+    if (error) {
+        return new Op(
+            oi.op.type,
+            oi.op.object,
+            UUID.ERROR,
+            ai.op.event,
+            error
+        ).toString();
+    } else {
+        return new_frame.toString();
+    }
+}
+
+
+
 Frame.Iterator = Cursor;
 Frame.Cursor = Cursor;
-const ex = module.exports = Op; // TODO phase out
-ex.Frame = Frame;
-ex.Op = Op;
-ex.Stream = Stream;
-ex.Cursor = Cursor;
+const RON = module.exports = Op; // TODO phase out
+RON.Frame = Frame;
+RON.Op = Op;
+RON.Stream = Stream;
+RON.Cursor = Cursor;
+RON.reduce = generic_reduce;
 
-ex.FN = {
+RON.FN = {
     RDT: {}, // reducers
     MAP: {}, // mappers
     API: {}, // API/assemblers
@@ -392,4 +445,4 @@ ex.FN = {
 // e.g. RON.FN.MAP.json.lww
 // RON.FN.REDUCE.lww
 // RON.FN.API.json
-// RON.FN.RDT.lww.FEATURES & RON.FN.IS.OP_BASED 
+// RON.FN.RDT.lww.IS & RON.FN.IS.OP_BASED
